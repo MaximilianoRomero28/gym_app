@@ -6,7 +6,7 @@ import conexion
 
 
 class gimnasios(conexion.base):
-    __tablename__="Gimnasios"
+    __tablename__="gimnasios"
 
     id=Column(Integer,primary_key=True)
     nombre_gimnasio=Column(String)
@@ -15,7 +15,7 @@ class gimnasios(conexion.base):
     usuarios=relationship("usuarios",back_populates="gimnasio")
 
 class usuarios(conexion.base):
-    __tablename__="Usuarios"
+    __tablename__="usuarios"
 
     id=Column(Integer,primary_key=True)
     nombre_usuario=Column(String)
@@ -27,7 +27,7 @@ class usuarios(conexion.base):
 
 
 class rutina(conexion.base):
-    __tablename__="Rutinas"
+    __tablename__="rutinas"
 
     id=Column(Integer,primary_key=True)
     nombre_rutina=Column(String)
@@ -43,5 +43,5 @@ class ejerciciosrutina(conexion.base):
     ejercicios=Column(String)
     series=Column(Integer)
     repeticiones=Column(Integer)
-    rutina_id=Column(Integer,ForeignKey("rutina.id"))
+    rutina_id=Column(Integer,ForeignKey("rutinas.id"))
     

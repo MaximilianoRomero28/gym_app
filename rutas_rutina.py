@@ -1,20 +1,22 @@
-from fastapi import Depends
+from fastapi import Depends,APIRouter
 from sqlalchemy.orm import Session
 import modelos
-import rutas_gimnasio
+import conexion
 from sqlalchemy import DateTime
 
-@rutas_gimnasio.router.post("/v1/rutina",status_code=201)
+router=APIRouter()
+
+@router.post("/v1/rutina",status_code=201)
 
 def cargar_nueva_rutina(nombre:str,fecha:DateTime,
-    db: Session=Depends(rutas_gimnasio.get_db)):
+    db: Session=Depends(conexion.get_db)):
     nueva_rutina=modelos.rutina(
         nombre_rutina=nombre,
         fecha_creacion=fecha
     )
 
-    db.add()
+    db.add(nueva_rutina)
     db.commit()
-    db.refresh()
+    db.refresh(nueva_rutina)
 
     return({"status":"OK","id_asignado":nueva_rutina.id}),201

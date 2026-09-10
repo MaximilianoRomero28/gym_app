@@ -1,28 +1,38 @@
-from fastapi import FastAPI,Depends
+from fastapi import Depends,APIRouter
 import conexion
 import modelos
 from sqlalchemy.orm import Session
-import rutas_gimnasio
+from seguridad import hashear_contrasena
 
-def get_db():
-    db=conexion.sesion_local()
-    try:
-        yield db
-    finally:
-        db.close()
 
-@rutas_gimnasio.router.post("/v1/usuarios",status_code=201)
+router=APIRouter()
+
+
+@router.post("/v1/usuarios/alumnos",status_code=201)
 def crear_nuevo_usuario(nombre:str,email:str,contrasena:str,
-    db: Session=Depends(get_db)):
+    gimnasio_id=int,db: Session=Depends(conexion.get_db)):
+
+    gimnasio_existente=db.query(modelos.gimnasios).filter(modelos.gimnasios.id==gimnasio_id).first()
+    
+    if not gimnasio_existente:
+        return ("El gimnasio especificado no existe en el sistema"),404
+
+    clave_cifrada=hashear_contrasena(contrasena)
+    
+
     nuevo_usuario=modelos.usuarios(
         nombre_usuario=nombre,
         email=email,
-        contrasena_hasheada=contrasena,
-        esta_activo=True
+        contrasena_hasheada=clave_cifrada,
+        esta_activo=True,
+        gimnasio_id=gimnasio_id,
+        rol="Alumno"
     )
 
-    db.add()
+    
+
+    db.add(nuevo_usuario)
     db.commit()
-    db.refresh()
+    db.refresh(nuevo_usuario)
 
     return({"status":"OK","id_asignado":nuevo_usuario.id}),201
