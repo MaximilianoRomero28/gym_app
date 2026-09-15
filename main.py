@@ -7,8 +7,20 @@ from rutas_rutina import router as router_rutina
 from rutas_ejercicios import router as router_ejercicios
 from rutas_asistencias import router as router_asistencia
 from rutas_pagos import router as router_pagos
+from fastapi.middleware.cors import CORSMiddleware
 
 app=FastAPI()
+
+origins=["*"]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 app.include_router(router_usuario)
 

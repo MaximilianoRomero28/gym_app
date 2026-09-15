@@ -52,7 +52,11 @@ def login_usuario(email:str,contrasena_plana:str,db:Session=Depends(conexion.get
 
     token_generado=seguridad.crear_token_acceso(usuario)
 
-    return {"access_token":token_generado,"token_type":"bearer"}
+    return {"access_token":token_generado,"token_type":"bearer",
+        "config_visual":{
+            "nombre_gimnasio": usuario.gimnasio.nombre_gimnasio,
+            "direccion": usuario.gimnasio.ubicacion
+        }}
 
 
 @router.get("/v1/usuarios/buscar", status_code=200)

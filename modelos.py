@@ -14,6 +14,8 @@ class gimnasios(conexion.base):
     nombre_gimnasio=Column(String)
     ubicacion=Column(String)
     esta_activo=Column(Boolean)
+    logo_url=Column(String,default="https://tuapi.com")
+    color_hex=Column(String,default="#FF0000")
     usuarios=relationship("usuarios",back_populates="gimnasio")
 
 class nombreroles(enum.Enum):
