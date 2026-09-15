@@ -1,6 +1,6 @@
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column,String,Integer,ForeignKey,Boolean
-from sqlalchemy import DateTime,Enum,func
+from sqlalchemy import DateTime,Enum,func,Float
 import enum
 
 
@@ -34,13 +34,14 @@ class usuarios(conexion.base):
 
     id=Column(Integer,primary_key=True)
     nombre_usuario=Column(String)
-    email=Column(String)
-    contrasena_hasheada=Column(String)
+    email=Column(String,nullable=False)
+    contrasena_hasheada=Column(String,nullable=False)
     esta_activo=Column(Boolean)
     gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"))
     rol_id=Column(Integer,ForeignKey("roles.id"))
     gimnasio=relationship("gimnasios",back_populates="usuarios") 
     rol_relacion=relationship("roles",back_populates="usuarios")
+    cuota_al_dia=Column(Boolean,default=True,nullable=False)
 
 
 class rutina(conexion.base):
@@ -61,6 +62,27 @@ class ejerciciosrutina(conexion.base):
     series=Column(Integer)
     repeticiones=Column(Integer)
     rutina_id=Column(Integer,ForeignKey("rutinas.id"))
+
+class pagos(conexion.base):
+    __tablename__="Pagos"
+
+    id=Column(Integer,primary_key=True)
+    monto=Column(Float,nullable=False)
+    fecha_pago=Column(DateTime,nullable=False)
+    fecha_vencimiento=Column(DateTime,nullable=False)
+    alumno_id=Column(Integer,ForeignKey("usuarios.id"),nullable=False)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+
+class asistencias(conexion.base):
+    __tablename__="Asistencias"
+
+    id=Column(Integer,primary_key=True)
+    fecha_asistencia=Column(DateTime,nullable=False)
+    alumno_id=Column(Integer,ForeignKey("usuarios.id"),nullable=False)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+
+
+
 
 
     

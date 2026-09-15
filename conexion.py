@@ -1,9 +1,14 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine,event
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.engine import Engine
 
 url_base_datos="sqlite:///gimnasio.db"
 
-engine=create_engine(url_base_datos, connect_args={"check_same_thread":False})
+engine=create_engine(url_base_datos, 
+    connect_args={"check_same_thread":False
+        }
+    )
+
 
 sesion_local=sessionmaker(autocommit=False,autoflush=False,bind=engine)
 

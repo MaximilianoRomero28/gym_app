@@ -18,10 +18,10 @@ def crear_nuevo_usuario(nombre:str,email:str,contrasena:str,
     rol_existente=db.query(modelos.roles).filter(modelos.roles.id==rol_id).first()
     
     if not gimnasio_existente:
-        return ("El gimnasio especificado no existe en el sistema"),404
+        raise HTTPException(status_code=400, detail="El gimnasio especificado no existe")
 
     if not rol_existente:
-        return ("El rol no existe en la lista")
+        raise HTTPException(status_code=400,detail="El rol no existe")
 
     clave_cifrada=hashear_contrasena(contrasena)
     

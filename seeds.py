@@ -1,7 +1,9 @@
-from conexion import sesion_local
+import conexion 
 import modelos
 
-db=sesion_local()
+modelos.conexion.base.metadata.create_all(bind=conexion.engine)
+
+db=conexion.sesion_local()
 
 try:
     rol_1=modelos.roles(nombre=modelos.nombreroles.dueno)
