@@ -3,6 +3,7 @@ import modelos
 import conexion
 from fastapi import APIRouter,Depends,HTTPException
 from sqlalchemy.orm import Session
+import obtener_rutina
 
 router=APIRouter()
 
@@ -32,3 +33,26 @@ def verificacion_pago(alumno_id:int,monto:float,gimnasio_id:int,cuotas_pagas:int
     db.refresh(nuevo_pago)
 
     return {"status":"PAGO_REGISTRADO","recibo_id":nuevo_pago.id,"vence_el":nuevo_pago.fecha_vencimiento}
+
+@router.get("/v1/pagos/alumno", status_code=200)
+def obtener_historial_pagos_alumno(
+    db: Session = Depends(conexion.get_db), 
+    usuario_actual: modelos.usuarios = Depends(obtener_rutina.obtener_usuario_actual)
+    ): 
+
+    alumno_id_int = int(usuario_actual.id)
+
+    # Buscamos todos los pagos asociados a este alumno en SQLite
+    historial = db.query(modelos.pagos).filter(
+        modelos.pagos.alumno_id == alumno_id_int
+    ).order_by(modelos.pagos.id.desc()).all()
+
+    # Formateamos las fechas a texto limpio (Año-Mes-Día) para que Flutter las dibuje fácil
+    return [
+        {
+            "id": pago.id,
+            "monto": pago.monto,
+            "fecha_pago": pago.fecha_pago.strftime("%Y-%m-%d"),
+            "fecha_vencimiento": pago.fecha_vencimiento.strftime("%Y-%m-%d")
+        } for pago in historial
+    ]

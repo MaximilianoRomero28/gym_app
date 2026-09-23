@@ -2,7 +2,7 @@ from fastapi import Depends,APIRouter,HTTPException
 from sqlalchemy.orm import Session
 import modelos
 import conexion
-from sqlalchemy import DateTime
+from datetime import datetime
 
 router=APIRouter()
 
@@ -25,10 +25,10 @@ def cargar_nueva_rutina(nombre_rutina:str, profesor_id:int,
     if not gimnasio_existe:
         raise HTTPException(status_code=404,detail="Gimnasio inexistente")
 
-    fecha_actual=DateTime.utcnow()
+    fecha_actual=datetime.utcnow()
     
     nueva_rutina=modelos.rutina(
-        nombre=nombre_rutina,
+        nombre_rutina=nombre_rutina,
         fecha_creacion=fecha_actual,
         alumno_id=alumno_id,
         profesor_id=profesor_id,
@@ -39,4 +39,4 @@ def cargar_nueva_rutina(nombre_rutina:str, profesor_id:int,
     db.commit()
     db.refresh(nueva_rutina)
 
-    return({"status":"OK","id_asignado":nueva_rutina.id}),201
+    return({"status":"OK","id_asignado":nueva_rutina.id})

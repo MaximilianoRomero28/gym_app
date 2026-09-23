@@ -8,6 +8,8 @@ from rutas_ejercicios import router as router_ejercicios
 from rutas_asistencias import router as router_asistencia
 from rutas_pagos import router as router_pagos
 from fastapi.middleware.cors import CORSMiddleware
+from obtener_rutina import router as router_get_rutina
+from rutas_marcas_personales import router as router_marcas_personales
 
 app=FastAPI()
 
@@ -33,6 +35,10 @@ app.include_router(router_ejercicios)
 app.include_router(router_asistencia)
 
 app.include_router(router_pagos)
+
+app.include_router(router_get_rutina)
+
+app.include_router(router_marcas_personales)
 
 modelos.conexion.base.metadata.create_all(bind=conexion.engine)
 

@@ -43,7 +43,7 @@ class usuarios(conexion.base):
     rol_id=Column(Integer,ForeignKey("roles.id"))
     gimnasio=relationship("gimnasios",back_populates="usuarios") 
     rol_relacion=relationship("roles",back_populates="usuarios")
-    cuota_al_dia=Column(Boolean,default=True,nullable=False)
+    
 
 
 class rutina(conexion.base):
@@ -84,7 +84,24 @@ class asistencias(conexion.base):
     gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
 
 
+class MarcasPersonales(conexion.base):
+    __tablename__ = "MarcasPersonales"
 
+    id=Column(Integer,primary_key=True)
+    ejercicio_nombre=Column(String,nullable=False)
+    peso_kg=Column(Float,nullable=False)
+    repeticiones=Column(Integer,nullable=False)
+    fecha_registro=Column(DateTime,nullable=False)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+    usuario_id=Column(Integer,ForeignKey("usuarios.id"),nullable=False)
+
+class VisitasSalon(conexion.base):
+    __tablename__ = "IngresoGimnasio"
+
+    id=Column(Integer,primary_key=True)
+    fecha_ingreso=Column(DateTime,nullable=False)
+    alumno_id=Column(Integer, ForeignKey("usuarios.id"),nullable=False)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
 
 
     

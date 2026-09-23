@@ -40,9 +40,9 @@ def crear_nuevo_usuario(nombre:str,email:str,contrasena:str,
     db.commit()
     db.refresh(nuevo_usuario)
 
-    return({"status":"OK","id_asignado":nuevo_usuario.id}),201
+    return({"status":"OK","id_asignado":nuevo_usuario.id})
 
-@router.post("/v1/auth/login",status_code=201)
+@router.post("/v1/auth/login",status_code=200)
 def login_usuario(email:str,contrasena_plana:str,db:Session=Depends(conexion.get_db)):
 
     usuario=seguridad.autenticar_usuario(email,contrasena_plana,db)
@@ -53,6 +53,7 @@ def login_usuario(email:str,contrasena_plana:str,db:Session=Depends(conexion.get
     token_generado=seguridad.crear_token_acceso(usuario)
 
     return {"access_token":token_generado,"token_type":"bearer",
+        "rol": usuario.rol_relacion.nombre.value,
         "config_visual":{
             "nombre_gimnasio": usuario.gimnasio.nombre_gimnasio,
             "direccion": usuario.gimnasio.ubicacion
@@ -66,4 +67,20 @@ def buscar_alumno_predictivo(termino:str,gimnasio_id:int,db: Session=Depends(con
           modelos.usuarios.gimnasio_id==gimnasio_id
     ).all()
 
-    return resultados
+    respuesta=[]
+
+    for usuario in resultados:
+        rutinas_alumno = db.query(modelos.rutina).filter(
+            modelos.rutina.alumno_id==usuario.id).order_by(
+            modelos.rutina.id.desc()).all()
+
+        respuesta.append({
+            "id": usuario.id,
+            "nombre_usuario": usuario.nombre_usuario,
+            "gimnasio_id": usuario.gimnasio_id,
+            "rutinas_activas": [
+                {"id":r.id,
+                "nombre": r.nombre_rutina} for r in rutinas_alumno
+        ]
+    })
+    return respuesta

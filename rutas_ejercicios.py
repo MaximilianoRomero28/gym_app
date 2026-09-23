@@ -26,4 +26,22 @@ def cargar_nuevo_ejercicio(ejercicio:str,numeros_series:int,rep:int,rutina_id:in
     db.refresh(nuevo_ejercicio)
 
     return {"status":"OK","id_asignado":nuevo_ejercicio.id}
-    
+
+
+@router.get("/v1/rutina/{rutina_id}/ejercicios",status_code=200)
+def obtener_ejercicios_de_rutina(rutina_id:int,db:Session=Depends(conexion.get_db)):
+
+    rutina_existente=db.query(modelos.rutina).filter(modelos.rutina.id==rutina_id).first()
+
+    if not rutina_existente:
+        raise HTTPException(status_code=404, detail="Rutina inexistente")
+
+    ejercicios=db.query(modelos.ejerciciosrutina).filter(modelos.ejerciciosrutina.rutina_id==rutina_id).all()
+
+    return[
+        {
+            "nombre_del_ejercicio": ej.ejercicios,
+            "series": ej.series,
+            "repeticiones": ej.repeticiones
+        } for ej in ejercicios
+    ]
