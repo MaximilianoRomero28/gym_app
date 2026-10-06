@@ -1,7 +1,6 @@
 import conexion 
 import modelos
 
-modelos.conexion.base.metadata.create_all(bind=conexion.engine)
 
 db=conexion.sesion_local()
 

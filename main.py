@@ -48,7 +48,7 @@ app.include_router(rutas_plataforma.router_login)
 
 app.include_router(rutas_plataforma.router)
 
-modelos.conexion.base.metadata.create_all(bind=conexion.engine)
+
 
 
 
