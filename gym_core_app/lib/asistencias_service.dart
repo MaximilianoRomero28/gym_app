@@ -8,12 +8,10 @@ class AsistenciasService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token_seguro') ?? "";
 
-    const gimnasioID= "1";
 
     final url = Uri.http(ApiConfig.authority,
     '/v1/asistencias/fichar',{
-      "email": email,
-      "gimnasio_id": gimnasioID,
+      "email": email,      
     }
 
     );

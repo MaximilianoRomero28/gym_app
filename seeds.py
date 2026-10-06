@@ -6,15 +6,15 @@ modelos.conexion.base.metadata.create_all(bind=conexion.engine)
 db=conexion.sesion_local()
 
 try:
-    rol_1=modelos.roles(nombre=modelos.nombreroles.dueno)
-    rol_2=modelos.roles(nombre=modelos.nombreroles.recepcionista)
-    rol_3=modelos.roles(nombre=modelos.nombreroles.profesor)
-    rol_4=modelos.roles(nombre=modelos.nombreroles.alumno)
 
-    db.add(rol_1)
-    db.add(rol_2)
-    db.add(rol_3)
-    db.add(rol_4)
+    for nombre_rol in modelos.nombreroles:
+        existe=db.query(modelos.roles).filter(
+            modelos.roles.nombre==nombre_rol
+        ).first()
+        if not existe:
+            db.add(modelos.roles(nombre=nombre_rol))
+            print(f"Rol creado: {nombre_rol.value}")
+    
 
     db.commit()
 

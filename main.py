@@ -10,6 +10,8 @@ from rutas_pagos import router as router_pagos
 from fastapi.middleware.cors import CORSMiddleware
 from obtener_rutina import router as router_get_rutina
 from rutas_marcas_personales import router as router_marcas_personales
+from rutas_admin import router as router_admin
+import rutas_plataforma
 
 app=FastAPI()
 
@@ -40,7 +42,14 @@ app.include_router(router_get_rutina)
 
 app.include_router(router_marcas_personales)
 
+app.include_router(router_admin)
+
+app.include_router(rutas_plataforma.router_login)
+
+app.include_router(rutas_plataforma.router)
+
 modelos.conexion.base.metadata.create_all(bind=conexion.engine)
+
 
 
 

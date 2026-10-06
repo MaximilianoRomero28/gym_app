@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert' as convert; //para transformar los datos a json
 import 'package:gym_core_app/constans.dart';
 import 'package:gym_core_app/asistencias_service.dart';
+import 'package:gym_core_app/servicios_seguridad.dart';
 
 
 void main() {
@@ -163,6 +164,18 @@ class _PantallaPrincipalHomeState extends State<PantallaPrincipalHome> {
         _estadoAcceso ="DENEGADO";
         _mensajeServidor="ACCESO DENEGADO\nCuotaVencida. Regularice en administración";
       });
+    } else if (statusCode==423){
+      
+      _mensajeServidor=resultado['detail'] ?? "Cuenta desactivada.";
+     
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PantallaCuentaDesactivada(mensajeExplicativo: _mensajeServidor,)
+        )
+      );
     } else {
       setState(() {
         _estadoAcceso= "ESPERA";
@@ -267,6 +280,132 @@ class _ContenidoAppHubState extends State<ContenidoAppHub> {
 
   ];
 
+  Future<void> _procesarCambioContrasena (String actual, String nueva) async {
+    final String? errorMsg = await ServiciosSeguridad.cambiarContrasenaUniversal(actual, nueva);
+
+    if (!mounted) return;
+
+    if (errorMsg==null){
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Contraseña actualizada de forma exitosa"),
+          backgroundColor: Colors.green,
+        )
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Colors.redAccent,
+        )
+      );
+    }
+  }
+
+  void _mostrarModalSeguridad (BuildContext contexto) {
+    final TextEditingController actualController = TextEditingController();
+    final TextEditingController nuevaController= TextEditingController();
+
+    showModalBottomSheet(
+      context: contexto,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.vertical(top:Radius.circular(24))),
+
+      builder: (context){
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom +24,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Seguridad de Cuenta",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: ()=> Navigator.pop(context),
+                  )
+                ],
+              ),
+              const Text(
+                "Modifique su contraseña.",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+
+              TextField(
+                controller: actualController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Contraseña Actual",
+                  labelStyle: const TextStyle(fontSize: 13),
+                  prefixIcon: const Icon(Icons.lock_open, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: nuevaController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Nueva Contraseña",
+                  labelStyle: const TextStyle(fontSize: 13),
+                  prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    final String actual =actualController.text.trim();
+                    final String nueva= nuevaController.text.trim();
+
+                    if (actual.isEmpty || nueva.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Complete todos los campos."),
+                          backgroundColor: Colors.amber,
+                        )
+                      );
+                      return ;
+                    }
+                    _procesarCambioContrasena(actual, nueva);
+                  },
+                  child: const Text("Guardar Nueva Clave",style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
+          ),
+        );
+      }
+    );
+
+
+
+
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,6 +416,13 @@ class _ContenidoAppHubState extends State<ContenidoAppHub> {
         automaticallyImplyLeading: false,
 
         actions: [
+
+          IconButton(
+            icon: const Icon(Icons.lock_outline, color: Colors.white),
+            tooltip: "Cambiar Contraseña",
+            onPressed: () => _mostrarModalSeguridad(context),
+          ),
+
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: "Cerrar Sesión",
@@ -531,27 +677,27 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
       return;
     }
     if (_nombreRutinaController.text.trim().isEmpty){
-      messenger.showSnackBar((const SnackBar(content: Text("escribe nombre de la rutina"))));
+      messenger.showSnackBar((const SnackBar(content: Text("Escribe nombre de la rutina"))));
       return;
     }
 
     setState(() => _enviando=true);
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token_seguro') ?? "";
+    final token = prefs.getString('token_seguro') ?? "";    
 
-    final url=Uri.http(ApiConfig.authority,'/v1/rutina', {
-      'nombre_rutina': _nombreRutinaController.text.trim(),
-      'profesor_id': "1",//aca hacerlo automatico
-      'gimnasio_id': "1",
-      'alumno_id': _alumnoSeleccionado!['id'].toString(),
-    });
+    final url=Uri.http(ApiConfig.authority,'/v1/rutina');
 
     try {
       final respuesta= await http.post(
         url,
         headers: {
           'Authorization': 'Bearer $token',
-        }
+          'Content-Type': 'application/josn',
+        },
+        body: convert.jsonEncode({
+          'nombre_rutina': _nombreRutinaController.text.trim(),
+          'alumno_id': _alumnoSeleccionado!['id']
+        })
       );
       setState(() => _enviando=false);
 
@@ -628,12 +774,7 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
     final token= prefs.getString('token_seguro') ?? "";
 
     final url = Uri.http(ApiConfig.authority,
-    '/v1/ejerciciosrutina', {
-      'ejercicio': nombreEjercicioTipeado,
-      'numeros_series': _series.toString(),
-      'rep': _repeticiones.toString(),
-      'rutina_id': _rutinaIdCreada!.toString(),
-    });
+    '/v1/ejerciciosrutina');
 
     try {
       final respuesta = await http.post(
@@ -642,6 +783,12 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
           'Authorization': 'Bearer $token',
           'Content-Tpye': 'application/json',
         },
+        body: convert.jsonEncode({
+          'ejercicio': nombreEjercicioTipeado,
+          'numeros_series': _series.toString(),
+          'rep': _repeticiones.toString(),
+          'rutina_id': _rutinaIdCreada!.toString(),
+        })
       );
 
       setState(() => _enviando = false);
@@ -672,6 +819,194 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
     }
   }
 
+  //eliminar ejercicio
+  Future<void> _eliminarEjercicio(int ejercicioId, int rutinaId) async {
+    final prefs= await SharedPreferences.getInstance();
+    final String? token=prefs.getString('token_seguro');
+
+    final url=Uri.http(ApiConfig.authority,
+    '/v1/ejerciciosrutina/$ejercicioId');
+
+    try {
+      final respuesta = await http.delete(url,
+      headers: {
+        'Authorization': 'Bearer $token'
+      });
+
+      if (respuesta.statusCode==200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Ejercicio eliminado"),
+            backgroundColor: Colors.orange,
+          )
+        );
+        _cargarEjerciciosDeRutinaExistente(rutinaId);
+      }
+    } catch (e) {
+      //ignore: avoid_print
+      print("Error al borrar ejercicio: $e");
+    }
+  }
+
+  Future<void> _eliminarRutinaCompleta (int rutinaId) async {
+    bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("¿Eliminar Rutina entera?"),
+        content: const Text("Se borrará la rutina por completo con los ejercicios vinculados"),
+        actions: [
+          TextButton(onPressed: ()=> Navigator.pop(context,false), 
+          child: const Text("Cancelar")),
+          TextButton(onPressed: ()=> Navigator.pop(context,true), 
+          child: const Text("Eliminar", style: TextStyle(color: Colors.red))),
+        ],
+      )
+    );
+
+    if (confirmar != true) return;
+
+    final prefs= await SharedPreferences.getInstance();
+    final String? token= prefs.getString('token_seguro');
+
+    final url= Uri.http(ApiConfig.authority,
+    '/v1/rutina/$rutinaId');
+
+    try {
+      final respuesta= await http.delete(url,
+      headers: {
+        'Authorization': 'Bearer $token',
+      });
+
+      if (respuesta.statusCode==200){
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Rutina eliminada con éxito"),
+          backgroundColor: Colors.red),
+        );
+        setState(() {
+          if (_alumnoSeleccionado != null && _alumnoSeleccionado!['rutinas_activas'] != null) {
+            List<dynamic> listaActualizada= (_alumnoSeleccionado!['rutinas_activas'] as List)
+              .where((rut)=> rut['id'] != rutinaId).toList();
+            
+            _alumnoSeleccionado!['rutinas_activas']=listaActualizada;
+            _nombreRutinaController.clear();
+          }
+        });
+      }
+    } catch (e) {
+      //ignore: avoid_print
+      print("Error al borrar rutina: $e");
+    }
+
+  }
+
+  void _mostrarModalSeguridadProfesor(BuildContext contexto) {
+    final TextEditingController actualController = TextEditingController();
+    final TextEditingController nuevaController = TextEditingController();
+
+    showModalBottomSheet(
+      context: contexto,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom+24,
+          top: 24,
+          left: 24,
+          right: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Seguridad Staff", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                ],
+              ),
+              const Text("Actualice su contraseña de acceso",
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: actualController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Contraseña Actual",
+                  prefixIcon: const Icon(Icons.lock_open, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)) 
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nuevaController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Nueva Contraseña",
+                  prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))
+                ),
+              ),
+              SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  ),
+                  onPressed: () async{
+                    final String actual = actualController.text.trim();
+                    final String nueva= nuevaController.text.trim();
+
+                    if (actual.isEmpty || nueva.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Complete todos los campos"),
+                          backgroundColor: Colors.amber,
+                        )
+                      );
+                      return ;
+                    }
+
+                    final String? errorMsg = await ServiciosSeguridad.cambiarContrasenaUniversal(actual, nueva);
+
+                    if (!context.mounted) return;
+
+                    if (errorMsg==null){
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Contraseña actualizada"),
+                          backgroundColor: Colors.green,
+                        )
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(errorMsg),
+                          backgroundColor: Colors.redAccent,
+                        )
+                      );
+                    }
+                  },
+                  child: const Text("Guardar Nueva Clave",
+                  style: TextStyle(fontWeight: FontWeight.bold),),
+                ),
+              )
+            ],
+          ),
+        );
+      }
+    );
+  }
+
 
   @override
   void dispose() {
@@ -691,6 +1026,12 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
         foregroundColor: Colors.white,
       
       actions: [
+        IconButton(
+          icon: const Icon(Icons.lock_outline,
+          color: Colors.white),
+          tooltip: "Cambiar Contraseña",
+          onPressed: () => _mostrarModalSeguridadProfesor(context),
+        ),
         if (_rutinaIdCreada !=null)
           IconButton(
             icon: Icon(Icons.done_all, color: Colors.greenAccent),
@@ -740,9 +1081,14 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
                   if (textEditingValue.text.length < 2) return const Iterable.empty();
                   final prefs = await SharedPreferences.getInstance();
                   final token = prefs.getString('token_seguro') ?? "";
-                  final url = Uri.http(ApiConfig.authority, '/v1/usuarios/buscar', {'termino': textEditingValue.text, 'gimnasio_id': "1"});
+                  final url = Uri.http(ApiConfig.authority, '/v1/usuarios/buscar', {'termino': textEditingValue.text});
                   try {
-                    final respuesta = await http.get(url, headers: {'Authorization': 'Bearer $token'});
+                    final respuesta = await http.get(url, 
+                    headers: {
+                      'Authorization': 'Bearer $token',
+                      'Content-Type': 'application/json',
+                      }                     
+                      );
                     if (respuesta.statusCode == 200) {
                       final List<dynamic> datos = convert.jsonDecode(respuesta.body);
                       return datos.map((json) => json as Map<String, dynamic>);
@@ -782,18 +1128,48 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
                 const Text("O reanudar una rutina diaria existente:", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                 const SizedBox(height: 8),
                 ...(_alumnoSeleccionado!['rutinas_activas'] as List<dynamic>).map((rutina) {
+                  final int rutinaId=rutina['id'] ?? 0;
+                  final String nombreRutina=rutina['nombre'] ?? 'Rutina';
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        _nombreRutinaController.text = rutina['nombre'] ?? '';
-                        _nombreRutinaActiva = rutina['nombre'] ?? '';
-                        _cargarEjerciciosDeRutinaExistente(rutina['id']);
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(45)),
-                      icon: const Icon(Icons.fitness_center),
-                      label: Text("Entrar a: ${rutina['nombre']}"),
-                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _nombreRutinaController.text =nombreRutina;
+                              _nombreRutinaActiva=nombreRutina;
+                              _cargarEjerciciosDeRutinaExistente(rutinaId);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(45)
+                            ),
+                            icon: const Icon(Icons.fitness_center),
+                            label: Text("Entrar a $nombreRutina", overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.delete_forever, color: Colors.red,size: 22),
+                            tooltip: "Eliminar rutina por Completo",
+                            onPressed: () {
+                              _eliminarRutinaCompleta(rutinaId);
+                            },
+                          ),
+                        )
+                      ],
+                    )
                   );
                 }),
               ],
@@ -801,10 +1177,10 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
 
             // 2. FASE DE CARGA EN BUCLE (Inputs + Selectores Series/Reps + Botón Verde)
             if (modoCargaEjercicios) ...[
-              const Divider(height: 40, thickness: 2),
+              const Divider(height: 15, thickness: 2),
               Text("Añadiendo a Rutina: $_nombreRutinaActiva", style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 8),
-              const Text("Añadir Ejercicio a la Rutina", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+              const Text("Añadir Ejercicio", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
               const SizedBox(height: 16),
               TextField(
                 controller: _ejercicioController,
@@ -862,7 +1238,7 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
                 label: const Text("Cargar Ejercicio y Añadir Otro"),
               ),
               
-              // 🚨 NUEVA UBICACIÓN: EL LISTADO DE EJERCICIOS AHORA SE DIBUJA ABAJO DEL BOTÓN VERDE 🚨
+              
               const Divider(height: 40, thickness: 1),
               Text("Ejercicios Añadidos (${_ejerciciosCargadosEnSesion.length})", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.deepPurple)),
               const SizedBox(height: 12),
@@ -877,6 +1253,7 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
                   final nombreEjercicio = ej['nombre_del_ejercicio']?.toString() ?? 'Ejercicio';
                   final series = ej['series']?.toString() ?? '0';
                   final repeticiones = ej['repeticiones']?.toString() ?? '0';
+                  final int ejercicioId = ej['id'] ?? 0;
 
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -884,6 +1261,14 @@ class _PanelProfesorHub extends State<PanelProfesorHub> {
                       leading: CircleAvatar(backgroundColor: Colors.deepPurple, child: Text("${index + 1}", style: const TextStyle(color: Colors.white))),
                       title: Text(nombreEjercicio, style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text("$series Series x $repeticiones Reps"),
+
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent,size: 22),
+                        tooltip: "Quitar Ejercicio",
+                        onPressed: () {
+                          _eliminarEjercicio(ejercicioId, _rutinaIdCreada ?? 0);
+                        },
+                      ),
                     ),
                   );
                 },
@@ -1082,11 +1467,7 @@ class _VistasMarcasPersonalesState extends State<VistasMarcasPersonales> {
     final token = prefs.getString('token_seguro') ?? "";
 
     final url = Uri.http(ApiConfig.authority,
-    '/v1/marcas-personales',{
-      'ejercicio': ejercicio,
-      'peso': peso,
-      'reps': reps,
-    });
+    '/v1/marcas-personales');
 
     try {
       final respuesta= await http.post(
@@ -1094,7 +1475,12 @@ class _VistasMarcasPersonalesState extends State<VistasMarcasPersonales> {
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
-        }
+        },
+        body: convert.jsonEncode({
+          'ejercicio': ejercicio,
+          'peso': peso,
+          'reps': reps,
+        })
       );
 
       if (respuesta.statusCode==201) {
@@ -1229,16 +1615,16 @@ class _VistaAforoGimnasioState extends State<VistaAforoGimnasio> {
   @override
   void initState() {
     super.initState();
-    _obtenerAforoDelServidor(1);
+    _obtenerAforoDelServidor();
   }
 
-  Future<void> _obtenerAforoDelServidor(int gimnasioId) async{
+  Future<void> _obtenerAforoDelServidor() async{
     setState (() => _cargando=true);
     final prefs= await SharedPreferences.getInstance();
     final token= prefs.getString('token_seguro') ?? "";
 
     final url=Uri.http(ApiConfig.authority,
-      '/v1/gimnasios/$gimnasioId/aforo',
+      '/v1/gimnasios/aforo',
     );
 
 
@@ -1247,7 +1633,6 @@ class _VistaAforoGimnasioState extends State<VistaAforoGimnasio> {
         url,
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
         }
       );
 
@@ -1257,6 +1642,7 @@ class _VistaAforoGimnasioState extends State<VistaAforoGimnasio> {
           _cargando=false;
         });
       } else {
+        debugPrint("Aforo: ${respuesta.statusCode} ${respuesta.body}");
         setState(() => _cargando=false);
       }
     } catch (e) {
@@ -1291,7 +1677,7 @@ class _VistaAforoGimnasioState extends State<VistaAforoGimnasio> {
 
   return Scaffold(
     body: RefreshIndicator(
-      onRefresh: () => _obtenerAforoDelServidor(1),
+      onRefresh: () => _obtenerAforoDelServidor(),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -1375,7 +1761,7 @@ class _VistaAforoGimnasioState extends State<VistaAforoGimnasio> {
                         content: Text("¡Ingreso registrado con éxito! Buen entrenamiento"),
                       )
                     );
-                    _obtenerAforoDelServidor(1);
+                    _obtenerAforoDelServidor();
                   } else {
 
                     if (!context.mounted) return;
@@ -1402,7 +1788,7 @@ class _VistaAforoGimnasioState extends State<VistaAforoGimnasio> {
             const SizedBox(height: 16),
 
             OutlinedButton.icon(
-              onPressed:() => _obtenerAforoDelServidor(1),
+              onPressed:() => _obtenerAforoDelServidor(),
               icon: const Icon(Icons.refresh, color: Colors.deepPurple),
               label: const Text("Actualizar Ocupación",style: TextStyle(color: Colors.deepPurple)),
               style: OutlinedButton.styleFrom(
@@ -1567,4 +1953,56 @@ class _VistaAsistenciaMensualState extends State<VistaAsistenciaMensual> {
       ),
     );
   }
+}
+
+class PantallaCuentaDesactivada extends StatelessWidget{
+  final String mensajeExplicativo;
+
+  const PantallaCuentaDesactivada({
+    super.key,
+    this.mensajeExplicativo="Tu cuenta ha sido desactivada por la administración"
+  });
+
+  @override
+  Widget build(BuildContext context){
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      body: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(
+              Icons.lock_person,
+              size: 100,
+              color: Colors.redAccent,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Acceso Restringido",
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+
+            ElevatedButton.icon(
+              onPressed: () {
+                debugPrint("Contactando a soporte....");
+              },
+              icon: const Icon(Icons.support_agent),
+              label: const Text("Contactar a Recepción",style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold )),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
 }

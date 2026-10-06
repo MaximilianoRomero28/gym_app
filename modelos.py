@@ -13,10 +13,11 @@ class gimnasios(conexion.base):
     id=Column(Integer,primary_key=True)
     nombre_gimnasio=Column(String)
     ubicacion=Column(String)
-    esta_activo=Column(Boolean)
+    esta_activo=Column(Boolean,default=True,nullable=False)
     logo_url=Column(String,default="https://tuapi.com")
     color_hex=Column(String,default="#FF0000")
     usuarios=relationship("usuarios",back_populates="gimnasio")
+    capacidad_maxima=Column(Integer,default=50)
 
 class nombreroles(enum.Enum):
     dueno="Dueño"
@@ -31,6 +32,15 @@ class roles(conexion.base):
     nombre=Column(Enum(nombreroles), nullable=False)
     usuarios=relationship("usuarios",back_populates="rol_relacion")
 
+class Planes(conexion.base):
+    __tablename__ = "Planes"
+
+    id= Column(Integer, primary_key=True)
+    nombre_plan=Column(String, nullable=False)
+    precio=Column(Float,nullable=False)
+    dias_duracion=Column(Integer,default=30)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+
 class usuarios(conexion.base):
     __tablename__="usuarios"
 
@@ -43,6 +53,7 @@ class usuarios(conexion.base):
     rol_id=Column(Integer,ForeignKey("roles.id"))
     gimnasio=relationship("gimnasios",back_populates="usuarios") 
     rol_relacion=relationship("roles",back_populates="usuarios")
+    
     
 
 
@@ -74,6 +85,7 @@ class pagos(conexion.base):
     fecha_vencimiento=Column(DateTime,nullable=False)
     alumno_id=Column(Integer,ForeignKey("usuarios.id"),nullable=False)
     gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+    metodo_pago=Column(String, nullable=True)
 
 class asistencias(conexion.base):
     __tablename__="Asistencias"
@@ -103,5 +115,26 @@ class VisitasSalon(conexion.base):
     alumno_id=Column(Integer, ForeignKey("usuarios.id"),nullable=False)
     gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
 
+class administradores(conexion.base):
+    __tablename__ = "Administradores"
 
-    
+    id=Column(Integer,primary_key=True)
+    nombre=Column(String,nullable=False)
+    email=Column(String,nullable=False)
+    contrasena_hasheada=Column(String,nullable=False)
+    esta_activo=Column(Boolean,default=True,nullable=False)
+
+class pagosGimnasios(conexion.base):
+    __tablename__="PagosGimnasios"
+
+    id=Column(Integer,primary_key=True)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+    monto=Column(Float,nullable=False)
+    fecha_pago=Column(DateTime,nullable=False)
+    fecha_vencimiento=Column(DateTime,nullable=False)
+    metodo_pago=Column(String,nullable=False)
+    nota=Column(String,nullable=True)
+
+
+
+

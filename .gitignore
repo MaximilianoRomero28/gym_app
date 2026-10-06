@@ -1,1 +1,8 @@
 gimnasio.db
+.env
+
+__pycache__/
+.pytest_cache/
+.virtualenv/
+venv/
+*.pyc

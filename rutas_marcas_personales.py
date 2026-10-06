@@ -3,21 +3,22 @@ import conexion
 import modelos
 from sqlalchemy.orm import Session
 import obtener_rutina
-from datetime import datetime
+from datetime import datetime,timezone
+import clases
 
 router=APIRouter()
 
 @router.post("/v1/marcas-personales",status_code=201)
-def registrar_marcas_personales(ejercicio:str,peso:float,reps:int,
+def registrar_marcas_personales(datos: clases.marcasPersonales,
     db: Session=Depends(conexion.get_db),
     usuario_actual: modelos.usuarios= Depends(obtener_rutina.obtener_usuario_actual)):
 
-    fecha_hoy= datetime.utcnow()
+    fecha_hoy= datetime.now(timezone.utc)
 
     nueva_marca=modelos.MarcasPersonales(
-        ejercicio_nombre=ejercicio,
-        peso_kg=peso,
-        repeticiones=reps,
+        ejercicio_nombre=datos.ejercicio,
+        peso_kg=datos.peso,
+        repeticiones=datos.reps,
         fecha_registro=fecha_hoy,
         usuario_id=int(usuario_actual.id),
         gimnasio_id=int(usuario_actual.gimnasio_id)

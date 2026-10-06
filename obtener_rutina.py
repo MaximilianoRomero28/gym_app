@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer
 import seguridad
+import modelos
 
 router=APIRouter()
 
@@ -66,4 +67,48 @@ def obtener_rutina_completa(usuario_actual: modelos.usuarios=Depends(obtener_usu
                 } for ej in ejercicios
             ]
         })
+    return respuesta_completa
+
+@router.get("/v1/admin/usuarios/{alumno_id}/rutinas-completas",status_code=200)
+def obtener_rutinas_para_administracion(
+    alumno_id:int,
+    db: Session=Depends(conexion.get_db),
+    actual: modelos.usuarios=Depends(seguridad.requiere_rol(modelos.nombreroles.dueno,modelos.nombreroles.recepcionista))
+):
+
+    alumno=db.query(modelos.usuarios).filter(
+        modelos.usuarios.id==alumno_id,
+        modelos.usuarios.gimnasio_id==actual.gimnasio_id
+    ).first()
+
+    if not alumno:
+        raise HTTPException(status_code=404,detail="Alumno no encontrado")
+
+    
+    rutinas=db.query(modelos.rutina).filter(
+        modelos.rutina.alumno_id==alumno_id).order_by(
+            modelos.rutina.id.desc()
+        ).all()
+
+    if not rutinas:
+        return []
+
+    respuesta_completa= []
+
+    for rut in rutinas:
+        ejercicios=db.query(modelos.ejerciciosrutina).filter(modelos.ejerciciosrutina.rutina_id==rut.id).all()
+
+        respuesta_completa.append({
+            "id": rut.id,
+            "nombre_rutina": rut.nombre_rutina,
+            "ejercicios": [
+                {
+                    "id": ej.id,
+                    "nombre_ejercicio": ej.ejercicios,
+                    "series": ej.series,
+                    "repeticiones": ej.repeticiones
+                } for ej in ejercicios
+            ]
+        })
+
     return respuesta_completa
