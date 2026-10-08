@@ -5,13 +5,14 @@ from sqlalchemy.orm import Session
 import obtener_rutina
 from datetime import datetime,timezone
 import clases
+import seguridad
 
 router=APIRouter()
 
 @router.post("/v1/marcas-personales",status_code=201)
 def registrar_marcas_personales(datos: clases.marcasPersonales,
     db: Session=Depends(conexion.get_db),
-    usuario_actual: modelos.usuarios= Depends(obtener_rutina.obtener_usuario_actual)):
+    usuario_actual: modelos.usuarios= Depends(seguridad.obtener_usuario_actual)):
 
     fecha_hoy= datetime.now(timezone.utc)
 
@@ -33,7 +34,7 @@ def registrar_marcas_personales(datos: clases.marcasPersonales,
 
 @router.get("/v1/marcas-personales/historial",status_code=200)
 def obtener_historial_marcas(db: Session=Depends(conexion.get_db),
-    usuario_actual: modelos.usuarios=Depends(obtener_rutina.obtener_usuario_actual)):
+    usuario_actual: modelos.usuarios=Depends(seguridad.obtener_usuario_actual)):
 
     alumno_id_int=int(usuario_actual.id)
 
@@ -41,8 +42,6 @@ def obtener_historial_marcas(db: Session=Depends(conexion.get_db),
         modelos.MarcasPersonales.usuario_id==alumno_id_int
     ).order_by(modelos.MarcasPersonales.fecha_registro).all()
 
-    if historial is None:
-        raise HTTPException(status_code=404,detail="No hay marcas en tu historial.")
 
     return [
         {

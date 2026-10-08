@@ -31,7 +31,17 @@ function PanelPlataforma(){
     const [cargando, setCargando] = useState(false);
     const [errorApi, setErrorApi] = useState('');
     const [exitoApi, setExitoApi] = useState('');
+
+    //consultas
+    const [consultasSoporte, setConsultasSoporte]= useState([]);
+    const [cargandoSoporte, setCargandoSoporte] = useState(false);
+
     
+    
+    useEffect(() =>{
+        consultarSoporteGlobalApi();
+    }, []);
+
     const fetchPlataforma = async (endpoint,opciones={})=>{
         const url =`http://127.0.0.1:8000${endpoint}`;
         const cabecerasUnificadas ={
@@ -66,6 +76,8 @@ function PanelPlataforma(){
             const resGyms=await fetchPlataforma('/v1/plataforma/gimnasios');
             if (resGyms && resGyms.status===200){
                 const datosGyms= await resGyms.json();
+
+                
                 setListaGimnasios(datosGyms);
             }
 
@@ -89,7 +101,7 @@ function PanelPlataforma(){
         setErrorApi(''); setExitoApi('');
         const endpointAccion = estaActivoActualmente
          ? `/v1/plataforma/gimnasios/${gimnasioId}/desactivar`
-         : `/v1/plataforma/gimnasios/${gimnasiosId}/activar`;
+         : `/v1/plataforma/gimnasios/${gimnasioId}/activar`;
 
         try {
             const respuesta=await fetchPlataforma(endpointAccion,{
@@ -203,6 +215,57 @@ function PanelPlataforma(){
     const cerrarSesionSoberana = () => {
         sessionStorage.clear();
         window.location.href='/plataforma/login';
+    };
+
+    const consultarSoporteGlobalApi= async ()=>{
+        setCargandoSoporte(true);
+
+        const url=`http://127.0.0.1:8000/v1/plataforma/soporte/consultas`
+
+        try{
+            const respuesta= await fetch(url, {
+                method: "GET",
+                headers: {
+                    'Authorization': `Bearer ${tokenPlataforma}`
+                }
+            })
+
+            if (respuesta.status===200) {
+                const datos= await respuesta.json();
+
+                setConsultasSoporte(datos);
+            }
+        } catch (error) {
+            console.error("Error al conectar", error);
+        } finally {
+            setCargandoSoporte(false);
+        }
+    };
+
+    const marcarTickerComoResueltoApi = async(ticketId) =>{
+        const confirmar = window.confirm(`¿Confirmar que el problema técnico del ticket #${ticketId} fue solucionado?`);
+
+        if(!confirmar) return;
+
+        const url=`http://127.0.0.1:8000/v1/plataforma/soporte/consultas/${ticketId}/resolver`;
+
+        try {
+            const respuesta= await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${tokenPlataforma}`
+                }
+            });
+
+            if (respuesta.status===200) {
+                alert("Ticket cerrado con éxito.")
+                consultarSoporteGlobalApi();
+            } else {
+                alert("No se pudo cerrar el incidente técnico.");
+            }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     return (
@@ -520,6 +583,75 @@ function PanelPlataforma(){
                         </div>
                     </div>
                 )}
+
+                <div className="mt-8 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl text-slate-200">
+                    <div className="p-4 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-xs font-black text-slate-100 uppercase tracking-wider">Central de Incidentes y Soporte Técnico</h3>
+                            {consultasSoporte.filter(c => !c.esta_resuelto).length>0 && (
+                                <span className="bg-red-500 text-white font-mono text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-md shadow-red-900/50">
+                                    {consultasSoporte.filter(c => !c.esta_resuelto).length} PENDIENTES
+                                </span>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={consultarSoporteGlobalApi}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold px-3 py-1.5 rounded-xl border border-slate-700 cursor-pointer transition-colors">
+                              Recargar Tickets  
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        {cargandoSoporte ? (
+                            <div className="p-8 text-center text-xs text-slate-500 animate-pulse">Abriendo buzón de quejas corporativo...</div>
+                        ) : (!consultasSoporte || consultasSoporte.length===0) ? (
+                            <div className="p-10 text-center text-xs text-slate-500 italic">No registrás reclamos técnicos pendientes en ninguna sucursal del país.</div>
+                        ) : (
+                            <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr className="bg-slate-950 text-slate-400 uppercase text-[9px] tracking-widest border-b border-slate-800">
+                                        <th className="py-3 px-4 font-bold w-12">Ticket</th>
+                                        <th className="py-3 px-4 font-bold w-44">Gimnasio Cliente</th>
+                                        <th className="py-3 px-4 font-bold">Asunto del Problema</th>
+                                        <th className="py-3 px-4 font-bold">Detalle Técnico</th>
+                                        <th className="py-3 px-4 font-bold text-center w-36">Estado</th>
+                                        <th className="py-3 px-4 font-bold text-right w-36">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
+                                    {consultasSoporte.map((ticket) => (
+                                        <tr key={ticket.id} className={`hover:bg-slate-950/40 transition-colors ${!ticket.esta_resuelto ? 'bg-purple-950/10' : ''}`}>
+                                            <td className="py-3.5 px-4 font-mono text-purple-400 font-bold">#{ticket.id}</td>
+                                            <td className="py-3.5 px-4 font-bold text-slate-200">{ticket.nombre_gimnasio}</td>
+                                            <td className="py-3.5 px-4 text-slate-100 font-semibold">{ticket.asunto}</td>
+                                            <td className="py-3.5 px-4 text-slate-400 max-w-md whitespace-pre-wrap break-words" title={ticket.mensaje}>{ticket.mensaje}</td>
+                                            <td className="py-3.5 px-4 text-center">
+                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                                                    ticket.esta_resuelto ? 'bg-emerald-950/60 text-emerald-400 border-emerald-900/40' : 'bg-amber-950/60 text-amber-400 border-amber-900/40 animate-pulse'
+                                                }`}>
+                                                    {ticket.esta_resuelto ? 'RESUELTO' : 'PENDIENTE'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-right">
+                                                {!ticket.esta_resuelto ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={()=> marcarTickerComoResueltoApi(ticket.id)}
+                                                        className="bg-purple-600 hover:bg-purple-500 text-white font-black px-2.5 py-1 rounded text-[10px] cursor-pointer shadow transition-all uppercase tracking-wider"
+                                                    >
+                                                        Resolver
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-600 font-bold pr-2 italic">Cerrado</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
         </div>
     )   
 }

@@ -50,3 +50,7 @@ class nuevaRutina(BaseModel):
 class cambioContraseña(BaseModel):
     contrasena_actual:str
     contrasena_nueva:str=Field(min_length=8)
+
+class nuevaConsultaSchema(BaseModel):
+    asunto:str
+    mensaje:str

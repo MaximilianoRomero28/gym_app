@@ -61,6 +61,9 @@ def login_usuario(datos: clases.loginDatos ,db:Session=Depends(conexion.get_db))
     if not usuario:
         raise HTTPException(status_code=401,detail="Credenciales inválidas")
 
+    if not usuario.gimnasio.esta_activo:
+        raise HTTPException(status_code=403, detail="El gimnasio se encuentra desactivado")
+
     rol=usuario.rol_relacion.nombre
 
     if datos.cliente=="web" and rol not in seguridad.ROLES_WEB:

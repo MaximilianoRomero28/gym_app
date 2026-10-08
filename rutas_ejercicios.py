@@ -41,7 +41,7 @@ def obtener_ejercicios_de_rutina(rutina_id:int,db:Session=Depends(conexion.get_d
     rutina_existente=db.query(modelos.rutina).filter(modelos.rutina.id==rutina_id,
         modelos.rutina.gimnasio_id==actual.gimnasio_id).first()
 
-    if not rutina_existente:
+    if (actual.rol_relacion.nombre==modelos.nombreroles.alumno and rutina_existente.alumno_id!=actual.id):
         raise HTTPException(status_code=404, detail="Rutina inexistente")
 
     ejercicios=db.query(modelos.ejerciciosrutina).filter(modelos.ejerciciosrutina.rutina_id==rutina_id).all()

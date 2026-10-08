@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SeccionAlumnos from "./seccionUsuarios";
 import SeccionPlanes from "./seccionesPlanes";
 import SeccionFinanzas from "./seccionFinanzas";
 import SeccionSeguridad from "./seccionSeguridad";
+import SeccionSoporte from "./seccionSoporte";
 
 function App() {
     const [email, setEmail] = useState('');
@@ -15,6 +16,39 @@ function App() {
     const [nombreGym, setNombreGym] = useState(localStorage.getItem('nombre_gimnasio')  || '');
 
     const [vistaActiva, setVistaActiva] = useState(0);
+
+    //Fecha vencimiento
+    const [fechaVencimientoSoftware, setFechaVencimientoSoftware]=useState(null);
+
+    const consultarVencimientoLicenciaSaaS = async () => {
+        const configGym=JSON.parse(localStorage.getItem('config_visual')) || {};
+        const gimnasioId=configGym.gimnasio_id;
+
+        if (!gimnasioId) return;
+
+        const url="http://127.0.0.1:8000/v1/pago/gimnasio/vencimiento"
+
+        try {
+            const respuesta= await fetch(url,{
+                method: "GET",
+                headers:{
+                    'Authorization': `Bearer ${localStorage.getItem('token_web')}`,
+                },
+            });
+
+            if (respuesta.status===200) {
+                setFechaVencimientoSoftware(datos.fecha_vencimiento);
+            }
+        } catch (error) {
+            console.error("Error al auditar vencimiento", error)
+        }
+    };
+
+    useEffect(()=>{
+        if (rol==="Dueño") {
+            consultarVencimientoLicenciaSaaS();
+        }
+    }, [rol])
 
     const cerrarSesion = () => {
         localStorage.clear();
@@ -184,6 +218,17 @@ function App() {
                         </svg>
                         Mi Seguridad
                     </button>
+                    {rol==="Dueño" && (
+                        <button 
+                            onClick={()=>setVistaActiva(4)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all cursor-pointer ${vistaActiva === 4 ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            >
+                                <svg xmlns="http://w3.org" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                                Soporte Técnico 
+                        </button>
+                    )}
                 </nav>
                 <div className="p-4 border-t border-slate-800">
                     <button
@@ -203,17 +248,61 @@ function App() {
                         {vistaActiva===1 && "Inventario de Planes Comerciales"}
                         {vistaActiva===2 && "Estadísticas Financieras y Recaudación"}
                         {vistaActiva===3 && "Cambiar Contraseña"}
+                        {vistaActiva===4 && "Ayuda y Consultas"}
                     </h2>
                     <div className="flex items-center gap-3">
                         <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
                         <span className="text-sm font-semibold text-slate-600">Terminal Web Activa</span>
                     </div>
                 </header>
+
+                {rol==="Dueño" && (()=>{
+                    if (!fechaVencimientoSoftware) return null;
+
+                    const soloFechaStr = fechaVencimientoSoftware.includes('T')
+                    ? fechaVencimientoSoftware.split('T')[0]
+                    : fechaVencimientoSoftware.split('T')[0];
+                    
+                    const hoy = new Date();
+                    hoy.setHours(0,0,0,0);
+
+                    const fechaVence = new Date(soloFechaStr+'T00:00:00');
+
+                    const diferenciaMilisegundos = fechaVence.getTime() - hoy.getTime();
+                    const diasRestantes= Math.ceil(diferenciaMilisegundos/(1000*60*60*24));
+
+                    if (diasRestantes >0 && diasRestantes<=10) {
+                        return (
+                            <div className="w-full bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-amber-500 text-white rounded-xl shadow-md">
+                                        <svg xmlns="http://w3.org" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide">Período de Licenciamiento y Vencimiento Próximo</h4>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                             La suscripción mensual de su sucursal vence el próximo <strong>{fechaVence.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>. 
+                                                Recuerde registrar el pago correspondiente antes del corte automático de servicio.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-black bg-amber-200 text-amber-800 px-3 py-1 rounded-xl uppercase tracking-widest">
+                                    Quedan {diasRestantes} {diasRestantes === 1 ? 'Día' : 'Días'}
+                                </span>
+                            </div>
+                        )
+                    }
+                    return null;
+                })()}
+
                 <div className="p-8 flex-1 flex flex-col gap-6">
                     {vistaActiva===0 && <SeccionAlumnos/>}
                     {vistaActiva === 1 && <SeccionPlanes/>}
                     {vistaActiva===2 && <SeccionFinanzas/>}
                     {vistaActiva===3 && <SeccionSeguridad/>}
+                    {vistaActiva===4 && <SeccionSoporte/>}
                 </div>
             </main>
         </div>

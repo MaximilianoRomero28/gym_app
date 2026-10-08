@@ -1,4 +1,4 @@
-from datetime import datetime,timedelta, date
+from datetime import datetime,timedelta, date, timezone
 import modelos
 import conexion
 from fastapi import APIRouter,Depends,HTTPException
@@ -28,13 +28,23 @@ def cargar_pago(datos: clases.nuevoPago,
         raise HTTPException(status_code=404,detail="Plan inexistente")
     
 
-    fecha_hoy=datetime.utcnow()
+    fecha_base=datetime.now(timezone.utc).replace(tzinfo=None)
 
-    fecha_vencimiento=fecha_hoy+timedelta(days=plan_seleccionado.dias_duracion)
+    ultimo_vencimiento=db.query(func.max(modelos.pagos.fecha_vencimiento)).filter(
+        modelos.pagos.alumno_id==alumno_existente.id,
+        modelos.pagos.gimnasio_id==actual.gimnasio_id
+    ).scalar()
+
+    base=ultimo_vencimiento if ultimo_vencimiento and ultimo_vencimiento > fecha_base else fecha_base
+
+    fecha_vencimiento=func_auxiliares.calcular_vencimiento_dia_10(
+        base, func_auxiliares.meses_del_plan(plan_seleccionado.dias_duracion)
+    )
+
 
     nuevo_pago=modelos.pagos(
         monto=plan_seleccionado.precio,
-        fecha_pago=fecha_hoy,
+        fecha_pago=fecha_base,
         fecha_vencimiento=fecha_vencimiento,
         alumno_id=datos.alumno_id,
         gimnasio_id=actual.gimnasio_id,
@@ -223,4 +233,17 @@ def obtener_resumen_finanzas_gimnasio(
             "total_alumnos": len(alumnos)
         },
         "ultimos_movimientos": lista_movimientos
+    }
+
+@router.get("/v1/pago/gimnasio/vencimiento", status_code=200)
+def obtener_vencimiento_gimnasio(
+    usuario_actual:modelos.usuarios=Depends(seguridad.obtener_usuario_actual),
+    db:Session=Depends(conexion.get_db)
+):
+    vencimiento=db.query(func.max(modelos.pagosGimnasios.fecha_vencimiento)).filter(
+        modelos.pagosGimnasios.gimnasio_id==usuario_actual.gimnasio_id
+    ).scalar()
+
+    return{
+        "fecha_vencimiento": vencimiento
     }

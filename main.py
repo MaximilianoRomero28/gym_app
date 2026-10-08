@@ -12,6 +12,7 @@ from obtener_rutina import router as router_get_rutina
 from rutas_marcas_personales import router as router_marcas_personales
 from rutas_admin import router as router_admin
 import rutas_plataforma
+import soporte_consultas
 
 app=FastAPI()
 
@@ -47,6 +48,8 @@ app.include_router(router_admin)
 app.include_router(rutas_plataforma.router_login)
 
 app.include_router(rutas_plataforma.router)
+
+app.include_router(soporte_consultas.router)
 
 
 

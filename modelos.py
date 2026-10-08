@@ -136,5 +136,14 @@ class pagosGimnasios(conexion.base):
     nota=Column(String,nullable=True)
 
 
+class consultasSoporte(conexion.base):
+    __tablename__="ConsultasSoporte"
 
+    id=Column(Integer,primary_key=True)
+    gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"),nullable=False)
+    asunto=Column(String,nullable=False)
+    mensaje=Column(String,nullable=False)
+    fecha_envio=Column(DateTime,default=func.now(),nullable=False)
+    esta_resuelto=Column(Boolean,default=False,nullable=False)
+    gimansio=relationship("gimnasios")
 

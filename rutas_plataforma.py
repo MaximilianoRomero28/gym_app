@@ -10,6 +10,7 @@ import conexion
 import modelos
 import seguridad
 import modelos
+import func_auxiliares
 
 router_login = APIRouter(prefix="/v1/plataforma", tags=["plataforma"])
 
@@ -159,7 +160,7 @@ def _cambiar_estado_gimnasio(gimnasio_id: int, activo: bool, db: Session):
  
 @router.patch("/gimnasios/{gimnasio_id}/desactivar", status_code=200)
 def desactivar_gimnasio(gimnasio_id: int, db: Session = Depends(conexion.get_db)):
-    
+       
     return _cambiar_estado_gimnasio(gimnasio_id, False, db)
  
  
@@ -230,13 +231,18 @@ def registrar_pago_gimnasio(datos: NuevoPagoGimnasio, db: Session = Depends(cone
     
     ultimo_vencimiento = db.query(func.max(PagoGim.fecha_vencimiento)).filter(
         PagoGim.gimnasio_id == gimnasio.id).scalar()
+    
     desde = max(ahora, ultimo_vencimiento) if ultimo_vencimiento else ahora
  
+    meses=func_auxiliares.meses_del_plan(datos.dias_cubiertos)
+
+    fecha_vencimiento=func_auxiliares.calcular_vencimiento_dia_10(desde,meses)
+    
     pago = PagoGim(
         gimnasio_id=gimnasio.id,
         monto=datos.monto,
         fecha_pago=ahora,
-        fecha_vencimiento=desde + timedelta(days=datos.dias_cubiertos),
+        fecha_vencimiento=fecha_vencimiento,
         metodo_pago=datos.metodo_pago,
         nota=datos.nota,
     )
@@ -296,3 +302,38 @@ def resumen_finanzas(db: Session = Depends(conexion.get_db)):
             } for p in pagos_historicos
         ]
     }
+
+@router.get("/v1/plataforma/soporte/consultas",status_code=200)
+def listar_consultas_globales(
+    db:Session=Depends(conexion.get_db),
+    admin_actual=Depends(seguridad.obtener_superadmin_actual)
+):
+    consultas= db.query(modelos.consultasSoporte).order_by(
+        modelos.consultasSoporte.esta_resuelto.asc(),
+        modelos.consultasSoporte.fecha_envio.desc()
+    ).all()
+
+    return [
+        {
+            "id": c.id,
+            "gimnasio_nombre": c.gimnasio.nombre_gimnasio if c.gimnasio else "Gimnasio Desconocido",
+            "asunto":c.asunto,
+            "mensaje": c.mensaje,
+            "fecha_envio": c.fecha_envio.strfite("%Y-%m-%d %H:%M:%S") if c.fecha_envio else "",
+            "esta_resuelto": c.esta_resuelto
+        } for c in consultas
+    ]
+
+@router.patch("/soporte/consultas/{ticket_id}/resolver", status_code=200)
+def resolver_ticket_soporte(
+    ticket_id: int, db:Session=Depends(conexion.get_db),
+    admin_actual= Depends(seguridad.obtener_superadmin_actual)
+):
+    ticket=db.query(modelos.consultasSoporte).filter(
+        modelos.consultasSoporte.id==ticket_id
+    ).first()
+
+    ticket.esta_resuelto=True
+
+    db.commit()
+    return {"status": "OK", "detail": f"Ticket #{ticket_id} cerrado con éxito."}
