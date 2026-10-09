@@ -11,6 +11,7 @@ import seguridad
 import clases
 import func_auxiliares
 from typing import Optional
+import time
 
 
 router=APIRouter()
@@ -56,6 +57,8 @@ def crear_nuevo_usuario(datos: clases.nuevoUsuario,db: Session=Depends(conexion.
 @router.post("/v1/auth/login",status_code=200)
 def login_usuario(datos: clases.loginDatos ,db:Session=Depends(conexion.get_db)):
 
+    inicio=time.perf_counter()
+
     usuario=seguridad.autenticar_usuario(datos.email,datos.contrasena,db)
 
     if not usuario:
@@ -71,6 +74,11 @@ def login_usuario(datos: clases.loginDatos ,db:Session=Depends(conexion.get_db))
 
 
     token_generado=seguridad.crear_token_acceso(usuario)
+
+    print(
+        f"Autenticación:"
+        f"{time.perf_counter() - inicio:.3f} segundos"
+    )
 
     return {"access_token":token_generado,
         "token_type":"bearer",
