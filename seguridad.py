@@ -10,6 +10,7 @@ from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 import conexion
 import modelos
 import secrets
+import time
 
 
 load_dotenv()
@@ -35,13 +36,23 @@ def autenticar_usuario(email_ingresado,contrasena_plana_ingresada,db: Session):
 
     email=email_ingresado.strip().lower()
 
+    inicio_consulta=time.perf_counter()
+
     usuario_encontrado=db.query(modelos.usuarios).filter(modelos.usuarios.email==email).first()
+
+    fin_consulta=time.perf_counter()
 
     hash_a_verificar=usuario_encontrado.contrasena_hasheada if usuario_encontrado else HASH_FALSO
     contrasena_ok=verificar_contrasena(contrasena_plana_ingresada,hash_a_verificar)
 
+    fin_verificacion=time.perf_counter()
+
     if not usuario_encontrado or not contrasena_ok or not usuario_encontrado.esta_activo:
         return None
+
+    print(f"Consulta SQL: {fin_consulta - inicio_consulta:.3f} s")
+
+    print(f"Verificacion contraseña: {fin_verificacion - fin_consulta:.3f}s")
 
     return usuario_encontrado
 
