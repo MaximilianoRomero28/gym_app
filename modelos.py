@@ -46,7 +46,7 @@ class usuarios(conexion.base):
 
     id=Column(Integer,primary_key=True)
     nombre_usuario=Column(String)
-    email=Column(String,nullable=False)
+    email=Column(String,nullable=False,unique=True,index=True)
     contrasena_hasheada=Column(String,nullable=False)
     esta_activo=Column(Boolean)
     gimnasio_id=Column(Integer,ForeignKey("gimnasios.id"))
